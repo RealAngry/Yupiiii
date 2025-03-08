@@ -1,0 +1,12 @@
+{
+  "description": "A Moderation bot",
+  "features": [
+    "Moderation commands",
+    "Utility tools",
+    "Custom profiles",
+    "Giveaway system",
+    "And much more!"
+  ],
+  "createdAt": 1741385014578,
+  "lastUpdated": 1741385258486
+}

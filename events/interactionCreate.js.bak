@@ -1,0 +1,909 @@
+const { Events, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, ModalBuilder, TextInputBuilder, TextInputStyle, StringSelectMenuBuilder } = require('discord.js');
+
+// Define categories object at the top level
+const categories = {};
+
+module.exports = {
+    name: Events.InteractionCreate,
+    async execute(interaction, client) {
+        // Initialize categories if not already done
+        if (Object.keys(categories).length === 0) {
+            console.log('Initializing categories...');
+            client.commands.forEach(command => {
+                const category = command.category || 'Uncategorized';
+                if (!categories[category]) {
+                    categories[category] = [];
+                }
+                categories[category].push(command);
+            });
+            console.log(`Initialized ${Object.keys(categories).length} categories: ${Object.keys(categories).join(', ')}`);
+        }
+        
+        // Handle button interactions
+        if (interaction.isButton()) {
+            try {
+                const customId = interaction.customId;
+                
+                if (customId === 'help_back_to_main') {
+                    await interaction.deferUpdate();
+                    const embed = new EmbedBuilder()
+                        .setTitle('Bot Command Overview')
+                        .setDescription('Use the dropdown menu below to browse command categories.\nUse `/help command:[command_name]` for detailed information about a specific command.')
+                        .setColor('#00FFFF')
+                        .setThumbnail(client.user.displayAvatarURL({ dynamic: true }))
+                        .addFields(
+                            { name: 'Bot Information', value: `Servers: ${client.guilds.cache.size}\nCommands: ${client.commands.size}\nSlash Commands: ${client.slashCommands.size}` }
+                        )
+                        .setFooter({ text: `Total Commands: ${client.commands.size} | Type /help command:[command_name] for details` })
+                        .setTimestamp();
+
+                    const categoryList = Object.keys(categories).map(category => {
+                        return `**${category}** (${categories[category].length} commands)`;
+                    });
+
+                    embed.addFields({ name: 'Categories', value: categoryList.join('\n') });
+
+                    const selectMenu = new StringSelectMenuBuilder()
+                        .setCustomId('help_category_select')
+                        .setPlaceholder('Select a category')
+                        .addOptions(
+                            Object.keys(categories).map(category => ({
+                                label: category,
+                                description: `View ${category} commands (${categories[category].length})`,
+                                value: category
+                            }))
+                        );
+
+                    const buttons = new ActionRowBuilder()
+                        .addComponents(
+                            new ButtonBuilder()
+                                .setCustomId('help_regular_commands')
+                                .setLabel('View Regular Commands')
+                                .setStyle(ButtonStyle.Primary),
+                            new ButtonBuilder()
+                                .setLabel('Invite Bot')
+                                .setStyle(ButtonStyle.Link)
+                                .setURL(`https://discord.com/api/oauth2/authorize?client_id=${client.user.id}&permissions=8&scope=bot%20applications.commands`),
+                            new ButtonBuilder()
+                                .setLabel('Support Server')
+                                .setStyle(ButtonStyle.Link)
+                                .setURL('https://discord.gg/yoursupportserver')
+                        );
+
+                    const selectRow = new ActionRowBuilder()
+                        .addComponents(selectMenu);
+
+                    await interaction.editReply({ embeds: [embed], components: [selectRow, buttons] });
+                } else if (customId === 'help_regular_commands') {
+                    await interaction.deferUpdate();
+                    
+                    const embed = new EmbedBuilder()
+                        .setTitle('Regular Commands')
+                        .setDescription('Here are all the regular commands you can use with the prefix.')
+                        .setColor('#00FFFF')
+                        .setThumbnail(client.user.displayAvatarURL({ dynamic: true }))
+                        .setFooter({ text: `Total Commands: ${client.commands.size}` })
+                        .setTimestamp();
+
+                    // Get the prefix from client or use default
+                    const prefix = client.prefix || '!';
+                    
+                    // Group commands by category
+                    Object.keys(categories).forEach(category => {
+                        const commandList = categories[category].map(cmd => `\`${cmd.name}\``).join(', ');
+                        embed.addFields({ name: category, value: commandList || 'No commands in this category' });
+                    });
+
+                    // Create buttons
+                    const buttons = new ActionRowBuilder()
+                        .addComponents(
+                            new ButtonBuilder()
+                                .setCustomId('help_slash_commands')
+                                .setLabel('View Slash Commands')
+                                .setStyle(ButtonStyle.Primary),
+                            new ButtonBuilder()
+                                .setLabel('Invite Bot')
+                                .setStyle(ButtonStyle.Link)
+                                .setURL(`https://discord.com/api/oauth2/authorize?client_id=${client.user.id}&permissions=8&scope=bot%20applications.commands`),
+                            new ButtonBuilder()
+                                .setLabel('Support Server')
+                                .setStyle(ButtonStyle.Link)
+                                .setURL('https://discord.gg/yoursupportserver')
+                        );
+
+                    await interaction.editReply({ embeds: [embed], components: [buttons] });
+                } else if (customId === 'help_slash_commands') {
+                    await interaction.deferUpdate();
+                    
+                    const embed = new EmbedBuilder()
+                        .setTitle('Slash Commands')
+                        .setDescription('Here are all the slash commands you can use.')
+                        .setColor('#00FFFF')
+                        .setThumbnail(client.user.displayAvatarURL({ dynamic: true }))
+                        .setFooter({ text: `Total Slash Commands: ${client.slashCommands.size}` })
+                        .setTimestamp();
+
+                    // Group slash commands by category
+                    const slashCategories = {};
+                    client.slashCommands.forEach(cmd => {
+                        const category = cmd.category || 'Uncategorized';
+                        if (!slashCategories[category]) {
+                            slashCategories[category] = [];
+                        }
+                        slashCategories[category].push(cmd);
+                    });
+                    
+                    // Add fields for each category
+                    Object.keys(slashCategories).forEach(category => {
+                        const commandList = slashCategories[category].map(cmd => `\`/${cmd.name}\``).join(', ');
+                        embed.addFields({ name: category, value: commandList || 'No commands in this category' });
+                    });
+
+                    // Create buttons
+                    const buttons = new ActionRowBuilder()
+                        .addComponents(
+                            new ButtonBuilder()
+                                .setCustomId('help_regular_commands')
+                                .setLabel('View Regular Commands')
+                                .setStyle(ButtonStyle.Primary),
+                            new ButtonBuilder()
+                                .setLabel('Invite Bot')
+                                .setStyle(ButtonStyle.Link)
+                                .setURL(`https://discord.com/api/oauth2/authorize?client_id=${client.user.id}&permissions=8&scope=bot%20applications.commands`),
+                            new ButtonBuilder()
+                                .setLabel('Support Server')
+                                .setStyle(ButtonStyle.Link)
+                                .setURL('https://discord.gg/yoursupportserver')
+                        );
+
+                    await interaction.editReply({ embeds: [embed], components: [buttons] });
+                } else {
+                    // For other buttons, use the original parsing logic
+                    const [action, ...args] = customId.split('_');
+                    
+                    if (action === 'giveaway') {
+                        const subAction = args[0];
+                        
+                        if (subAction === 'enter') {
+                            await handleGiveawayEnter(interaction, client);
+                        } else if (subAction === 'info') {
+                            await handleGiveawayInfo(interaction, client);
+                        }
+                    } else if (action === 'profile') {
+                        await handleProfileButtons(interaction, client);
+                    } else if (action === 'ticket') {
+                        await handleTicketButtons(interaction, client);
+                    }
+                }
+            } catch (error) {
+                console.error(`Error handling button interaction: ${error}`);
+                try {
+                    const response = { content: `An error occurred: ${error.message}`, ephemeral: true };
+                    if (interaction.deferred || interaction.replied) {
+                        await interaction.editReply(response);
+                    } else {
+                        await interaction.reply(response);
+                    }
+                } catch (replyError) {
+                    console.error(`Error replying to button interaction: ${replyError}`);
+                }
+            }
+            
+            return;
+        }
+        
+        // Handle modal submissions
+        if (interaction.isModalSubmit()) {
+            if (interaction.customId === 'ticket_create_modal') {
+                await handleTicketCreate(interaction, client);
+            }
+            
+            return;
+        }
+        
+        // Handle select menu interactions
+        if (interaction.isSelectMenu()) {
+            try {
+                console.log(`Select menu interaction received: ${interaction.customId}`);
+                console.log(`Selected values: ${interaction.values.join(', ')}`);
+                
+                if (interaction.customId === 'help_category_select') {
+                    const category = interaction.values[0];
+                    console.log(`Selected category: ${category}`);
+                    
+                    // Check if category exists in categories
+                    if (!categories[category]) {
+                        console.error(`Category not found: ${category}`);
+                        return interaction.reply({ 
+                            content: `Category not found: ${category}`, 
+                            ephemeral: true 
+                        });
+                    }
+                    
+                    // Use the commands directly from the categories object
+                    const categoryCommands = categories[category];
+                    console.log(`Found ${categoryCommands.length} commands in category ${category}`);
+                    
+                    await showCategoryCommands(interaction, client, category, categoryCommands);
+                }
+            } catch (error) {
+                console.error(`Error handling select menu interaction: ${error.stack}`);
+                try {
+                    const response = { content: `An error occurred: ${error.message}`, ephemeral: true };
+                    if (interaction.deferred || interaction.replied) {
+                        await interaction.editReply(response);
+                    } else {
+                        await interaction.reply(response);
+                    }
+                } catch (replyError) {
+                    console.error(`Error replying to select menu interaction: ${replyError}`);
+                }
+            }
+            return;
+        }
+        
+        // Handle slash commands
+        if (interaction.isChatInputCommand()) {
+            const command = client.slashCommands.get(interaction.commandName);
+            
+            if (!command) {
+                console.error(`No command matching ${interaction.commandName} was found.`);
+                return;
+            }
+            
+            try {
+                await command.execute(interaction, client);
+            } catch (error) {
+                console.error(`Error executing ${interaction.commandName}`);
+                console.error(error);
+                
+                if (interaction.replied || interaction.deferred) {
+                    await interaction.followUp({ content: 'There was an error while executing this command!', ephemeral: true });
+                } else {
+                    await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
+                }
+            }
+        }
+    }
+};
+
+// Handle giveaway enter button
+async function handleGiveawayEnter(interaction, client) {
+    try {
+        // Check if giveaways collection exists
+        if (!client.giveaways) {
+            return interaction.reply({
+                content: 'Giveaway system is not initialized.',
+                ephemeral: true
+            });
+        }
+        
+        // Get giveaway data
+        const giveaway = client.giveaways.get(interaction.message.id);
+        if (!giveaway) {
+            return interaction.reply({
+                content: 'This giveaway no longer exists.',
+                ephemeral: true
+            });
+        }
+        
+        // Check if giveaway has ended
+        if (giveaway.ended) {
+            return interaction.reply({
+                content: 'This giveaway has already ended.',
+                ephemeral: true
+            });
+        }
+        
+        // Check if user has already entered
+        if (giveaway.participants.has(interaction.user.id)) {
+            // Remove user from participants
+            giveaway.participants.delete(interaction.user.id);
+            
+            // Update giveaway data
+            client.giveaways.set(interaction.message.id, giveaway);
+            
+            return interaction.reply({
+                content: 'You have left the giveaway.',
+                ephemeral: true
+            });
+        } else {
+            // Add user to participants
+            giveaway.participants.add(interaction.user.id);
+            
+            // Update giveaway data
+            client.giveaways.set(interaction.message.id, giveaway);
+            
+            return interaction.reply({
+                content: 'You have entered the giveaway! Good luck!',
+                ephemeral: true
+            });
+        }
+    } catch (error) {
+        console.error('Error handling giveaway enter:', error);
+        return interaction.reply({
+            content: 'There was an error processing your request.',
+            ephemeral: true
+        });
+    }
+}
+
+// Handle giveaway info button
+async function handleGiveawayInfo(interaction, client) {
+    try {
+        // Check if giveaways collection exists
+        if (!client.giveaways) {
+            return interaction.reply({
+                content: 'Giveaway system is not initialized.',
+                ephemeral: true
+            });
+        }
+        
+        // Get giveaway data
+        const giveaway = client.giveaways.get(interaction.message.id);
+        if (!giveaway) {
+            return interaction.reply({
+                content: 'This giveaway no longer exists.',
+                ephemeral: true
+            });
+        }
+        
+        // Create info embed
+        const embed = new EmbedBuilder()
+            .setTitle('Giveaway Information')
+            .setDescription(`Prize: **${giveaway.prize}**`)
+            .addFields(
+                { name: 'Host', value: `<@${giveaway.hostId}>`, inline: true },
+                { name: 'Winners', value: `${giveaway.winners}`, inline: true },
+                { name: 'Participants', value: `${giveaway.participants.size}`, inline: true },
+                { name: 'Ends At', value: `<t:${Math.floor(giveaway.endTime / 1000)}:F>`, inline: true },
+                { name: 'Time Left', value: `<t:${Math.floor(giveaway.endTime / 1000)}:R>`, inline: true },
+                { name: 'Status', value: giveaway.ended ? '🔴 Ended' : '🟢 Active', inline: true }
+            )
+            .setColor('#FF00FF')
+            .setFooter({ text: `Giveaway ID: ${interaction.message.id}` })
+            .setTimestamp();
+        
+        // Check if user has entered
+        const hasEntered = giveaway.participants.has(interaction.user.id);
+        embed.addFields({ name: 'Your Status', value: hasEntered ? '✅ Entered' : '❌ Not Entered' });
+        
+        return interaction.reply({
+            embeds: [embed],
+            ephemeral: true
+        });
+    } catch (error) {
+        console.error('Error handling giveaway info:', error);
+        return interaction.reply({
+            content: 'There was an error processing your request.',
+            ephemeral: true
+        });
+    }
+}
+
+// Handle profile buttons
+async function handleProfileButtons(interaction, client) {
+    const [action, userId, page] = interaction.customId.split('_').slice(1);
+    
+    // Initialize profiles collection if it doesn't exist
+    if (!client.profiles) {
+        client.profiles = new Map();
+    }
+    
+    // Initialize badges collection if it doesn't exist
+    if (!client.badges) {
+        client.badges = new Map([
+            ['owner', { name: 'Bot Owner', emoji: '👑', description: 'The owner of the bot' }],
+            ['developer', { name: 'Bot Developer', emoji: '⚙️', description: 'A developer of the bot' }],
+            ['admin', { name: 'Bot Admin', emoji: '🛡️', description: 'An administrator of the bot' }],
+            ['moderator', { name: 'Bot Moderator', emoji: '🔨', description: 'A moderator of the bot' }],
+            ['supporter', { name: 'Bot Supporter', emoji: '💎', description: 'A supporter of the bot' }],
+            ['partner', { name: 'Bot Partner', emoji: '🤝', description: 'A partner of the bot' }],
+            ['bug_hunter', { name: 'Bug Hunter', emoji: '🐛', description: 'Found and reported bugs in the bot' }],
+            ['early_supporter', { name: 'Early Supporter', emoji: '🌟', description: 'Supported the bot early in its development' }],
+            ['premium', { name: 'Premium User', emoji: '💰', description: 'A premium user of the bot' }]
+        ]);
+    }
+    
+    // Get user
+    const user = await client.users.fetch(userId).catch(() => null);
+    
+    if (!user) {
+        return interaction.reply({ content: 'User not found.', ephemeral: true });
+    }
+    
+    // Get user profile
+    if (!client.profiles.has(user.id)) {
+        // Create default profile
+        const defaultProfile = {
+            bio: 'No bio set.',
+            badges: [],
+            customTitle: '',
+            xp: 0,
+            level: 0,
+            joinedAt: Date.now(),
+            lastUpdated: Date.now()
+        };
+        
+        // Set default badges based on user role
+        const isMainOwner = user.id === (process.env.OWNER_ID || client.config?.ownerId);
+        const isExtraOwner = client.extraOwners && client.extraOwners.has(user.id);
+        
+        if (isMainOwner) {
+            defaultProfile.badges.push('owner');
+        } else if (isExtraOwner) {
+            defaultProfile.badges.push('admin');
+        }
+        
+        client.profiles.set(user.id, defaultProfile);
+    }
+    
+    const profile = client.profiles.get(user.id);
+    
+    // Get member if in guild
+    const member = interaction.guild.members.cache.get(user.id) || 
+                  await interaction.guild.members.fetch(user.id).catch(() => null);
+    
+    if (action === 'badges') {
+        // Show badges page
+        if (!profile.badges || profile.badges.length === 0) {
+            return interaction.reply({ content: `${user.tag} doesn't have any badges.`, ephemeral: true });
+        }
+        
+        const badgesList = profile.badges.map(badgeId => {
+            const badge = client.badges.get(badgeId);
+            return badge ? `${badge.emoji} **${badge.name}** - ${badge.description}` : null;
+        }).filter(badge => badge !== null);
+        
+        const embed = new EmbedBuilder()
+            .setTitle(`${user.tag}'s Badges`)
+            .setDescription(badgesList.join('\n'))
+            .setColor(member ? member.displayHexColor : '#00FFFF')
+            .setThumbnail(user.displayAvatarURL({ dynamic: true }))
+            .setFooter({ text: `Requested by ${interaction.user.tag}` })
+            .setTimestamp();
+        
+        // Create buttons
+        const row = new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`profile_info_${user.id}`)
+                    .setLabel('Back to Profile')
+                    .setStyle(ButtonStyle.Primary)
+            );
+        
+        return interaction.update({ embeds: [embed], components: [row] });
+    } else if (action === 'info') {
+        // Show main profile page
+        const embed = new EmbedBuilder()
+            .setTitle(profile.customTitle || `${user.tag}'s Profile`)
+            .setColor(member ? member.displayHexColor : '#00FFFF')
+            .setThumbnail(user.displayAvatarURL({ dynamic: true, size: 256 }))
+            .addFields(
+                { name: 'User ID', value: user.id, inline: true },
+                { name: 'Created Account', value: `<t:${Math.floor(user.createdTimestamp / 1000)}:R>`, inline: true }
+            );
+        
+        // Add member-specific info if available
+        if (member) {
+            embed.addFields(
+                { name: 'Joined Server', value: `<t:${Math.floor(member.joinedTimestamp / 1000)}:R>`, inline: true },
+                { name: 'Highest Role', value: `${member.roles.highest}`, inline: true }
+            );
+        }
+        
+        // Add bio
+        embed.addFields({ name: 'Bio', value: profile.bio || 'No bio set.' });
+        
+        // Add badges count if any
+        if (profile.badges && profile.badges.length > 0) {
+            embed.addFields({ 
+                name: 'Badges', 
+                value: `This user has ${profile.badges.length} badge${profile.badges.length !== 1 ? 's' : ''}. Click the button below to view them.`, 
+                inline: true 
+            });
+        }
+        
+        // Add XP and level if enabled
+        if (profile.xp !== undefined && profile.level !== undefined) {
+            embed.addFields({ 
+                name: 'Experience', 
+                value: `Level: ${profile.level}\nXP: ${profile.xp}`, 
+                inline: true 
+            });
+        }
+        
+        // Create buttons
+        const row = new ActionRowBuilder();
+        
+        // Add badges button if user has badges
+        if (profile.badges && profile.badges.length > 0) {
+            row.addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`profile_badges_${user.id}`)
+                    .setLabel('View Badges')
+                    .setStyle(ButtonStyle.Primary)
+                    .setEmoji('🏆')
+            );
+        }
+        
+        // Add refresh button
+        row.addComponents(
+            new ButtonBuilder()
+                .setCustomId(`profile_refresh_${user.id}`)
+                .setLabel('Refresh')
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('🔄')
+        );
+        
+        return interaction.update({ 
+            embeds: [embed], 
+            components: row.components.length > 0 ? [row] : [] 
+        });
+    } else if (action === 'refresh') {
+        // Refresh profile (same as info but fetches fresh data)
+        // Fetch fresh user data
+        const freshUser = await client.users.fetch(userId, { force: true }).catch(() => user);
+        
+        // Fetch fresh member data if in guild
+        const freshMember = interaction.guild ? 
+                          await interaction.guild.members.fetch(userId).catch(() => member) : 
+                          null;
+        
+        const embed = new EmbedBuilder()
+            .setTitle(profile.customTitle || `${freshUser.tag}'s Profile`)
+            .setColor(freshMember ? freshMember.displayHexColor : '#00FFFF')
+            .setThumbnail(freshUser.displayAvatarURL({ dynamic: true, size: 256 }))
+            .addFields(
+                { name: 'User ID', value: freshUser.id, inline: true },
+                { name: 'Created Account', value: `<t:${Math.floor(freshUser.createdTimestamp / 1000)}:R>`, inline: true }
+            );
+        
+        // Add member-specific info if available
+        if (freshMember) {
+            embed.addFields(
+                { name: 'Joined Server', value: `<t:${Math.floor(freshMember.joinedTimestamp / 1000)}:R>`, inline: true },
+                { name: 'Highest Role', value: `${freshMember.roles.highest}`, inline: true }
+            );
+        }
+        
+        // Add bio
+        embed.addFields({ name: 'Bio', value: profile.bio || 'No bio set.' });
+        
+        // Add badges count if any
+        if (profile.badges && profile.badges.length > 0) {
+            embed.addFields({ 
+                name: 'Badges', 
+                value: `This user has ${profile.badges.length} badge${profile.badges.length !== 1 ? 's' : ''}. Click the button below to view them.`, 
+                inline: true 
+            });
+        }
+        
+        // Add XP and level if enabled
+        if (profile.xp !== undefined && profile.level !== undefined) {
+            embed.addFields({ 
+                name: 'Experience', 
+                value: `Level: ${profile.level}\nXP: ${profile.xp}`, 
+                inline: true 
+            });
+        }
+        
+        // Create buttons
+        const row = new ActionRowBuilder();
+        
+        // Add badges button if user has badges
+        if (profile.badges && profile.badges.length > 0) {
+            row.addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`profile_badges_${freshUser.id}`)
+                    .setLabel('View Badges')
+                    .setStyle(ButtonStyle.Primary)
+                    .setEmoji('🏆')
+            );
+        }
+        
+        // Add refresh button
+        row.addComponents(
+            new ButtonBuilder()
+                .setCustomId(`profile_refresh_${freshUser.id}`)
+                .setLabel('Refresh')
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('🔄')
+        );
+        
+        return interaction.update({ 
+            embeds: [embed], 
+            components: row.components.length > 0 ? [row] : [] 
+        });
+    }
+}
+
+async function handleTicketButtons(interaction, client) {
+    const subAction = interaction.customId.split('_')[1];
+    
+    // Initialize tickets collection if it doesn't exist
+    if (!client.tickets) {
+        client.tickets = {
+            channels: new Map(),
+            configs: new Map(),
+            count: new Map()
+        };
+    }
+    
+    // Handle ticket creation
+    if (subAction === 'create') {
+        // Check if ticket system is set up for this guild
+        if (!client.tickets.configs.has(interaction.guild.id)) {
+            return interaction.reply({ 
+                content: 'The ticket system is not set up in this server.',
+                ephemeral: true 
+            });
+        }
+        
+        // Check if user already has an open ticket
+        const existingTicket = Array.from(client.tickets.channels.values())
+            .find(ticket => ticket.guildId === interaction.guild.id && ticket.userId === interaction.user.id);
+        
+        if (existingTicket) {
+            const channel = interaction.guild.channels.cache.get(existingTicket.channelId);
+            
+            if (channel) {
+                return interaction.reply({ 
+                    content: `You already have an open ticket: ${channel}`,
+                    ephemeral: true 
+                });
+            }
+        }
+        
+        // Create modal for ticket creation
+        const modal = new ModalBuilder()
+            .setCustomId('ticket_create_modal')
+            .setTitle('Create a Support Ticket');
+        
+        // Add inputs to the modal
+        const ticketSubjectInput = new TextInputBuilder()
+            .setCustomId('ticketSubject')
+            .setLabel('Subject')
+            .setPlaceholder('Brief subject of your ticket')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMaxLength(100);
+        
+        const ticketDescriptionInput = new TextInputBuilder()
+            .setCustomId('ticketDescription')
+            .setLabel('Description')
+            .setPlaceholder('Please describe your issue in detail')
+            .setStyle(TextInputStyle.Paragraph)
+            .setRequired(true)
+            .setMaxLength(1000);
+        
+        // Add inputs to action rows
+        const subjectRow = new ActionRowBuilder().addComponents(ticketSubjectInput);
+        const descriptionRow = new ActionRowBuilder().addComponents(ticketDescriptionInput);
+        
+        // Add action rows to the modal
+        modal.addComponents(subjectRow, descriptionRow);
+        
+        // Show the modal
+        await interaction.showModal(modal);
+    } else if (subAction === 'close') {
+        // Check if the current channel is a ticket
+        if (!client.tickets.channels.has(interaction.channel.id)) {
+            return interaction.reply({ 
+                content: 'This command can only be used in a ticket channel.',
+                ephemeral: true 
+            });
+        }
+        
+        const ticketData = client.tickets.channels.get(interaction.channel.id);
+        
+        // Create log embed
+        const logEmbed = new EmbedBuilder()
+            .setTitle(`Ticket #${ticketData.number} Closed`)
+            .setDescription(`Ticket created by <@${ticketData.userId}> has been closed.`)
+            .addFields(
+                { name: 'Closed By', value: `<@${interaction.user.id}>` },
+                { name: 'Reason', value: 'Closed via button' }
+            )
+            .setColor('#FF0000')
+            .setFooter({ text: `Ticket ID: ${interaction.channel.id}` })
+            .setTimestamp();
+        
+        // Notify the user that the ticket is being closed
+        await interaction.reply({ 
+            content: 'This ticket will be closed in 5 seconds...',
+            embeds: [logEmbed]
+        });
+        
+        // Remove from tickets collection
+        client.tickets.channels.delete(interaction.channel.id);
+        
+        // Wait 5 seconds then delete the channel
+        setTimeout(async () => {
+            try {
+                await interaction.channel.delete();
+            } catch (error) {
+                console.error(`Error deleting ticket channel: ${error}`);
+            }
+        }, 5000);
+    }
+}
+
+async function handleTicketCreate(interaction, client) {
+    // Get ticket data from modal
+    const subject = interaction.fields.getTextInputValue('ticketSubject');
+    const description = interaction.fields.getTextInputValue('ticketDescription');
+    
+    // Get ticket configuration
+    const config = client.tickets.configs.get(interaction.guild.id);
+    
+    // Increment ticket count
+    let ticketCount = client.tickets.count.get(interaction.guild.id) || 0;
+    ticketCount++;
+    client.tickets.count.set(interaction.guild.id, ticketCount);
+    
+    // Create ticket channel
+    try {
+        // Determine parent category if set
+        const parent = config.categoryId ? interaction.guild.channels.cache.get(config.categoryId) : null;
+        
+        // Create channel name
+        const channelName = `ticket-${ticketCount}`;
+        
+        // Create the channel
+        const channel = await interaction.guild.channels.create({
+            name: channelName,
+            type: ChannelType.GuildText,
+            parent: parent,
+            permissionOverwrites: [
+                {
+                    id: interaction.guild.id, // @everyone role
+                    deny: [PermissionFlagsBits.ViewChannel]
+                },
+                {
+                    id: interaction.user.id, // Ticket creator
+                    allow: [
+                        PermissionFlagsBits.ViewChannel,
+                        PermissionFlagsBits.SendMessages,
+                        PermissionFlagsBits.ReadMessageHistory
+                    ]
+                },
+                {
+                    id: interaction.client.user.id, // Bot
+                    allow: [
+                        PermissionFlagsBits.ViewChannel,
+                        PermissionFlagsBits.SendMessages,
+                        PermissionFlagsBits.ReadMessageHistory,
+                        PermissionFlagsBits.ManageChannels
+                    ]
+                }
+            ]
+        });
+        
+        // Add support roles if any
+        if (config.supportRoleIds && config.supportRoleIds.length > 0) {
+            for (const roleId of config.supportRoleIds) {
+                await channel.permissionOverwrites.edit(roleId, {
+                    ViewChannel: true,
+                    SendMessages: true,
+                    ReadMessageHistory: true
+                });
+            }
+        }
+        
+        // Store ticket data
+        client.tickets.channels.set(channel.id, {
+            channelId: channel.id,
+            guildId: interaction.guild.id,
+            userId: interaction.user.id,
+            number: ticketCount,
+            subject: subject,
+            createdAt: Date.now()
+        });
+        
+        // Create welcome embed
+        const embed = new EmbedBuilder()
+            .setTitle(`Ticket #${ticketCount}: ${subject}`)
+            .setDescription('Thank you for creating a ticket. Our support team will assist you shortly.')
+            .addFields(
+                { name: 'Created By', value: `<@${interaction.user.id}>` },
+                { name: 'Subject', value: subject },
+                { name: 'Description', value: description }
+            )
+            .setColor('#00FFFF')
+            .setFooter({ text: `Ticket ID: ${channel.id}` })
+            .setTimestamp();
+        
+        // Create close button
+        const row = new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId('ticket_close')
+                    .setLabel('Close Ticket')
+                    .setStyle(ButtonStyle.Danger)
+                    .setEmoji('🔒')
+            );
+        
+        // Send welcome message
+        await channel.send({ 
+            content: `<@${interaction.user.id}> Welcome to your ticket!`,
+            embeds: [embed],
+            components: [row]
+        });
+        
+        // Reply to the user
+        await interaction.reply({ 
+            content: `Your ticket has been created: ${channel}`,
+            ephemeral: true 
+        });
+    } catch (error) {
+        console.error(`Error creating ticket: ${error}`);
+        await interaction.reply({ 
+            content: `Failed to create ticket: ${error.message}`,
+            ephemeral: true 
+        });
+    }
+}
+
+// Update showCategoryCommands function
+async function showCategoryCommands(interaction, client, categoryName, commands) {
+    try {
+        console.log(`Showing commands for category: ${categoryName}`);
+        console.log(`Number of commands: ${commands.length}`);
+        
+        const embed = new EmbedBuilder()
+            .setTitle(`${categoryName} Commands`)
+            .setDescription(`Here are all the commands in the ${categoryName} category.`)
+            .setColor('#00FFFF')
+            .setFooter({ text: `Total: ${commands.length} commands` })
+            .setTimestamp();
+
+        // Group commands by functionality
+        const commandsByFunction = {};
+        commands.forEach(cmd => {
+            const func = cmd.functionality || 'General';
+            if (!commandsByFunction[func]) {
+                commandsByFunction[func] = [];
+            }
+            commandsByFunction[func].push(cmd);
+        });
+
+        console.log(`Grouped commands by functionality: ${Object.keys(commandsByFunction).join(', ')}`);
+
+        // Add fields for each functionality group
+        Object.keys(commandsByFunction).forEach(func => {
+            const cmds = commandsByFunction[func].map(cmd => `\`${cmd.name}\``).join(', ');
+            embed.addFields({ name: func, value: cmds || 'No commands' });
+        });
+
+        // Create back button
+        const row = new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId('help_back_to_main')
+                    .setLabel('Back to Categories')
+                    .setStyle(ButtonStyle.Secondary)
+            );
+
+        console.log('Sending response with embed and back button');
+        await interaction.update({ embeds: [embed], components: [row] });
+        console.log('Response sent successfully');
+    } catch (error) {
+        console.error(`Error showing category commands: ${error.stack}`);
+        try {
+            if (!interaction.replied && !interaction.deferred) {
+                await interaction.reply({ 
+                    content: `An error occurred: ${error.message}`, 
+                    ephemeral: true 
+                });
+            } else {
+                await interaction.followUp({ 
+                    content: `An error occurred: ${error.message}`, 
+                    ephemeral: true 
+                });
+            }
+        } catch (replyError) {
+            console.error(`Error replying with error message: ${replyError}`);
+        }
+    }
+} 
