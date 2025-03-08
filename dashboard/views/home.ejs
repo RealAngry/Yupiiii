@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bot Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-2 bg-dark text-white sidebar p-0">
+                <div class="d-flex flex-column align-items-center p-3 mb-4">
+                    <img src="<%= botInfo.avatar %>" alt="Bot Avatar" class="bot-avatar mb-2">
+                    <h4><%= botInfo.username %></h4>
+                </div>
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/"><i class="fas fa-server me-2"></i> Servers</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/bot-status"><i class="fas fa-info-circle me-2"></i> Bot Status</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/announcements"><i class="fas fa-bullhorn me-2"></i> Announcements</a>
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- Main Content -->
+            <div class="col-md-10 main-content">
+                <div class="container py-4">
+                    <h1 class="mb-4">Bot Dashboard</h1>
+                    
+                    <!-- Bot Stats -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="card bg-primary text-white">
+                                <div class="card-body">
+                                    <h5 class="card-title"><i class="fas fa-server"></i> Servers</h5>
+                                    <h2 class="card-text"><%= botInfo.guildCount %></h2>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-success text-white">
+                                <div class="card-body">
+                                    <h5 class="card-title"><i class="fas fa-users"></i> Users</h5>
+                                    <h2 class="card-text"><%= botInfo.userCount %></h2>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Server List -->
+                    <h2 class="mb-3">Manage Servers</h2>
+                    <div class="row">
+                        <% guilds.forEach(guild => { %>
+                            <div class="col-md-4 mb-4">
+                                <div class="card server-card">
+                                    <div class="card-body d-flex align-items-center">
+                                        <img src="<%= guild.icon %>" alt="<%= guild.name %>" class="server-icon me-3">
+                                        <div>
+                                            <h5 class="card-title"><%= guild.name %></h5>
+                                            <p class="card-text"><i class="fas fa-users"></i> <%= guild.memberCount %> members</p>
+                                            <a href="/server/<%= guild.id %>" class="btn btn-primary">Manage</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        <% }); %>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="/js/main.js"></script>
+</body>
+</html> 

@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bot Status - Bot Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-2 bg-dark text-white sidebar p-0">
+                <div class="d-flex flex-column align-items-center p-3 mb-4">
+                    <img src="<%= botInfo.avatar %>" alt="Bot Avatar" class="bot-avatar mb-2">
+                    <h4><%= botInfo.username %></h4>
+                </div>
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/"><i class="fas fa-server me-2"></i> Servers</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/bot-status"><i class="fas fa-info-circle me-2"></i> Bot Status</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/announcements"><i class="fas fa-bullhorn me-2"></i> Announcements</a>
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- Main Content -->
+            <div class="col-md-10 main-content">
+                <div class="container py-4">
+                    <h1 class="mb-4">Bot Status</h1>
+                    
+                    <!-- Current Status -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h3>Current Status</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div class="status-indicator <%= botInfo.status === 'online' ? 'online' : botInfo.status === 'idle' ? 'idle' : botInfo.status === 'dnd' ? 'dnd' : 'offline' %> me-2"></div>
+                                        <h5 class="mb-0">Status: <%= botInfo.status.charAt(0).toUpperCase() + botInfo.status.slice(1) %></h5>
+                                    </div>
+                                    <p>
+                                        <strong>Activity:</strong> 
+                                        <% if (botInfo.activity) { %>
+                                            <%= ['Playing', 'Streaming', 'Listening to', 'Watching', 'Custom', 'Competing in'][botInfo.activityType] %> <%= botInfo.activity %>
+                                        <% } else { %>
+                                            None
+                                        <% } %>
+                                    </p>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="d-flex align-items-center">
+                                        <img src="<%= botInfo.avatar %>" alt="Bot Avatar" class="status-avatar me-3">
+                                        <div>
+                                            <h5><%= botInfo.username %></h5>
+                                            <p class="text-muted mb-0">Last updated: <span id="lastUpdated"><%= new Date().toLocaleString() %></span></p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Update Status -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Update Status</h3>
+                        </div>
+                        <div class="card-body">
+                            <form id="status-form">
+                                <div class="mb-3">
+                                    <label for="status" class="form-label">Status</label>
+                                    <select class="form-select" id="status" name="status">
+                                        <option value="online" <%= botInfo.status === 'online' ? 'selected' : '' %>>Online</option>
+                                        <option value="idle" <%= botInfo.status === 'idle' ? 'selected' : '' %>>Idle</option>
+                                        <option value="dnd" <%= botInfo.status === 'dnd' ? 'selected' : '' %>>Do Not Disturb</option>
+                                        <option value="invisible" <%= botInfo.status === 'invisible' ? 'selected' : '' %>>Invisible</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="activityType" class="form-label">Activity Type</label>
+                                    <select class="form-select" id="activityType" name="activityType">
+                                        <option value="0" <%= botInfo.activityType === 0 ? 'selected' : '' %>>Playing</option>
+                                        <option value="1" <%= botInfo.activityType === 1 ? 'selected' : '' %>>Streaming</option>
+                                        <option value="2" <%= botInfo.activityType === 2 ? 'selected' : '' %>>Listening to</option>
+                                        <option value="3" <%= botInfo.activityType === 3 ? 'selected' : '' %>>Watching</option>
+                                        <option value="5" <%= botInfo.activityType === 5 ? 'selected' : '' %>>Competing in</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="activityText" class="form-label">Activity Text</label>
+                                    <input type="text" class="form-control" id="activityText" name="activityText" value="<%= botInfo.activity !== 'None' ? botInfo.activity : '' %>" placeholder="Leave empty for no activity">
+                                </div>
+                                <button type="submit" class="btn btn-primary">Update Status</button>
+                                <button type="button" id="reset-status" class="btn btn-secondary ms-2">Reset to Default</button>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <!-- Preset Statuses -->
+                    <div class="card mt-4">
+                        <div class="card-header">
+                            <h3>Preset Statuses</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <div class="card h-100">
+                                        <div class="card-body">
+                                            <h5 class="card-title">Maintenance Mode</h5>
+                                            <p class="card-text">Set the bot to maintenance mode.</p>
+                                            <button class="btn btn-warning preset-status" data-status="dnd" data-type="3" data-text="maintenance">Apply</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <div class="card h-100">
+                                        <div class="card-body">
+                                            <h5 class="card-title">Help Mode</h5>
+                                            <p class="card-text">Show that the bot is ready to help.</p>
+                                            <button class="btn btn-info preset-status" data-status="online" data-type="3" data-text="for commands">Apply</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <div class="card h-100">
+                                        <div class="card-body">
+                                            <h5 class="card-title">Server Count</h5>
+                                            <p class="card-text">Display the number of servers.</p>
+                                            <button class="btn btn-success preset-status" data-status="online" data-type="3" data-text="servers">Apply</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Success Toast -->
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+        <div id="successToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header bg-success text-white">
+                <strong class="me-auto">Success</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body">
+                Bot status updated successfully!
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            // Form submission
+            $('#status-form').on('submit', function(e) {
+                e.preventDefault();
+                
+                const formData = {
+                    status: $('#status').val(),
+                    activityType: $('#activityType').val(),
+                    activityText: $('#activityText').val()
+                };
+                
+                updateStatus(formData);
+            });
+            
+            // Reset status
+            $('#reset-status').on('click', function() {
+                const formData = {
+                    status: 'online',
+                    activityType: '3',
+                    activityText: 'for commands'
+                };
+                
+                // Update form values
+                $('#status').val(formData.status);
+                $('#activityType').val(formData.activityType);
+                $('#activityText').val(formData.activityText);
+                
+                updateStatus(formData);
+            });
+            
+            // Preset statuses
+            $('.preset-status').on('click', function() {
+                const status = $(this).data('status');
+                const type = $(this).data('type');
+                const text = $(this).data('text');
+                
+                // Update form values
+                $('#status').val(status);
+                $('#activityType').val(type);
+                $('#activityText').val(text);
+                
+                const formData = {
+                    status: status,
+                    activityType: type.toString(),
+                    activityText: text
+                };
+                
+                updateStatus(formData);
+            });
+            
+            // Function to update status
+            function updateStatus(formData) {
+                $.ajax({
+                    url: '/api/bot-status',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(formData),
+                    success: function(response) {
+                        if (response.success) {
+                            // Update last updated time
+                            $('#lastUpdated').text(new Date().toLocaleString());
+                            
+                            // Show success toast
+                            const toast = new bootstrap.Toast(document.getElementById('successToast'));
+                            toast.show();
+                            
+                            // Reload page after 1 second to show updated status
+                            setTimeout(function() {
+                                location.reload();
+                            }, 1000);
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html> 
